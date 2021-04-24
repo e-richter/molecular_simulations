@@ -1,1 +1,1 @@
-# molecular_simulations
+# Methods of molecular simulation
