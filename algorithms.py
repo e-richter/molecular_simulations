@@ -129,3 +129,40 @@ def rungekutta4(y0, t, f, v):
 
     return y
 
+
+def BABAB_Ndim(r0, p0, t_max, dt, f, lam):
+
+    t = np.arange(0, t_max, dt)
+    N = len(r0)
+
+    r = np.zeros([len(t), N, r0.shape[1]])
+    p = np.zeros([len(t), N, p0.shape[1]])
+
+    r[0] = r0
+    p[0] = p0
+
+    r_i = r0
+    p_i = p0
+
+    for i in range(len(t) - 1):
+        a1 = f(r_i)
+
+        p_i += a1 * dt * lam
+
+        r_i += p_i * dt / 2.
+
+        a2 = f(r_i)
+
+        p_i += a2 * dt * (1 - 2 * lam)
+
+        r_i += p_i * dt / 2.
+
+        a3 = f(r_i)
+
+        p_i += a3 * dt * lam
+
+        r[i + 1] = r_i
+        p[i + 1] = p_i
+
+    return r, p, t
+
