@@ -1,5 +1,5 @@
-import numpy as np 
-import matplotlib.pyplot as plt
+import numpy as np
+from tqdm import tqdm
 
 
 def velocity_verlet(r1_0, r2_0, p1_0, p2_0, t_max, dt, f):
@@ -44,7 +44,7 @@ def velocity_verlet(r1_0, r2_0, p1_0, p2_0, t_max, dt, f):
         return r1, r2, p1, p2, t
 
 
-def velocity_verlet_BABAB(r1_0, r2_0, p1_0, p2_0, t_max, dt, f, l):
+def BABAB(r1_0, r2_0, p1_0, p2_0, t_max, dt, f, l):
 
     t = np.arange(0, t_max, dt)
 
@@ -133,10 +133,9 @@ def rungekutta4(y0, t, f, v):
 def BABAB_Ndim(r0, p0, t_max, dt, f, lam):
 
     t = np.arange(0, t_max, dt)
-    N = len(r0)
 
-    r = np.zeros([len(t), N, r0.shape[1]])
-    p = np.zeros([len(t), N, p0.shape[1]])
+    r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
+    p = np.zeros([len(t), p0.shape[0], p0.shape[1]])
 
     r[0] = r0
     p[0] = p0
@@ -144,7 +143,7 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam):
     r_i = r0
     p_i = p0
 
-    for i in range(len(t) - 1):
+    for i in tqdm(range(len(t) - 1)):
         a1 = f(r_i)
 
         p_i += a1 * dt * lam
@@ -165,4 +164,40 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam):
         p[i + 1] = p_i
 
     return r, p, t
+
+
+def velocity_verlet_Ndim(r0, p0, t_max, dt, f):
+
+        t = np.arange(0, t_max, dt)
+
+        r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
+        p = np.zeros([len(t), p0.shape[0], p0.shape[1]])
+
+        r[0] = r0
+        p[0] = p0
+
+        r_i = r0
+        p_i = p0
+
+        for i in range(len(t) - 1):
+            a11, a12 = f(r1_i, r2_i)
+
+            p1_i += a11 * dt / 2.
+            p2_i += a12 * dt / 2.
+
+            r1_i += p1_i * dt
+            r2_i += p2_i * dt
+
+            a21, a22 = f(r1_i, r2_i)
+
+            p1_i += a21 * dt / 2.
+            p2_i += a22 * dt / 2.
+
+            r1[i + 1] = r1_i
+            r2[i + 1] = r2_i
+
+            p1[i + 1] = p1_i
+            p2[i + 1] = p2_i
+
+        return r1, r2, p1, p2, t
 
