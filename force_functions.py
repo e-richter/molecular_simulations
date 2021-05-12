@@ -36,3 +36,14 @@ def FENE_force(r1, r2, eps=1, a=1):
     F2 = -eps / a ** 2 * (1 / (1 - (np.linalg.norm(r2 - r1) ** 2 / a ** 2))) * (r2 - r1)
 
     return F1, F2
+
+
+def chain_force(r):
+
+    N = len(r)
+    bond_force = np.zeros(r.shape)
+    for i in range(1, N):
+        f = -(r[i] - r[i-1])
+        bond_force[i-1] = f
+
+    return bond_force
