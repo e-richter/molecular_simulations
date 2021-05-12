@@ -180,24 +180,18 @@ def velocity_verlet_Ndim(r0, p0, t_max, dt, f):
         p_i = p0
 
         for i in range(len(t) - 1):
-            a11, a12 = f(r1_i, r2_i)
+            a1 = f(r_i)
 
-            p1_i += a11 * dt / 2.
-            p2_i += a12 * dt / 2.
+            p_i += a1 * dt / 2.
 
-            r1_i += p1_i * dt
-            r2_i += p2_i * dt
+            r_i += p_i * dt
 
-            a21, a22 = f(r1_i, r2_i)
+            a2 = f(r_i)
 
-            p1_i += a21 * dt / 2.
-            p2_i += a22 * dt / 2.
+            p_i += a2 * dt / 2.
 
-            r1[i + 1] = r1_i
-            r2[i + 1] = r2_i
+            r[i + 1] = r_i
+            p[i + 1] = p_i
 
-            p1[i + 1] = p1_i
-            p2[i + 1] = p2_i
-
-        return r1, r2, p1, p2, t
+        return r, p, t
 
