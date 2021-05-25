@@ -38,11 +38,16 @@ def FENE_force(r1, r2, eps=1, a=1):
     return F1, F2
 
 
-def chain_force(r, k=1):
+def chain_force(r, k=1, periodic=False):
     N = len(r)
     bond_force = np.zeros(r.shape)
-    bond_force[0] = k * (r[1] - r[0])
-    bond_force[N - 1] = -k * (r[N - 1] - r[N - 2])
+
+    if periodic:
+        bond_force[0] = -k * ((r[0] - r[-1]) - (r[1] - r[0]))
+        bond_force[-1] = -k * ((r[-1] - r[-2]) - (r[0] - r[-1]))
+    else:
+        bond_force[0] = k * (r[1] - r[0])
+        bond_force[-1] = -k * (r[-1] - r[-2])
 
     for i in range(1, N - 1):
         f = -(r[i] - r[i - 1]) + (r[i + 1] - r[i])
@@ -50,3 +55,8 @@ def chain_force(r, k=1):
         bond_force[i] = f
 
     return bond_force / np.linalg.norm(bond_force)
+
+
+def LJ_force(r, sigma=1):
+
+
