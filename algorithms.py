@@ -128,7 +128,14 @@ def rungekutta4(y0, t, f, v):
     return y
 
 
-def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise=True):
+def BABAB_Ndim(r0, p0, t_max, dt, f, lam,
+               thermal_noise: bool, periodic: dict):
+    """
+    usage of periodic:
+    periodic = {'PBC': bool,
+                'box_size': int,
+                'force': bool}
+    """
     t = np.arange(0, t_max, dt)
 
     r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
@@ -150,18 +157,24 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise=True):
         if i % tn == 0:
             p_i = np.random.normal(loc=0.0, scale=1.0, size=r0.shape)
         else:
-            a1 = f(r_i)
+            a1 = f(r_i, periodic=periodic['force'])
             p_i += a1 * dt * lam
 
         r_i += p_i * dt / 2.
+        if periodic['PBC']:
+            r_i[np.where(r_i > periodic['box_size'] / 2.)] = r_i[np.where(r_i > periodic['box_size'] / 2.)] - periodic['box_size']
+            r_i[np.where(r_i < -periodic['box_size'] / 2.)] = r_i[np.where(r_i < -periodic['box_size'] / 2.)] + periodic['box_size']
 
-        a2 = f(r_i)
+        a2 = f(r_i, periodic=periodic['force'])
 
         p_i += a2 * dt * (1 - 2 * lam)
 
         r_i += p_i * dt / 2.
+        if periodic['PBC']:
+            r_i[np.where(r_i > periodic['box_size'] / 2.)] = r_i[np.where(r_i > periodic['box_size'] / 2.)] - periodic['box_size']
+            r_i[np.where(r_i < -periodic['box_size'] / 2.)] = r_i[np.where(r_i < -periodic['box_size'] / 2.)] + periodic['box_size']
 
-        a3 = f(r_i)
+        a3 = f(r_i, periodic=periodic['force'])
 
         p_i += a3 * dt * lam
 
