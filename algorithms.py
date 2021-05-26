@@ -184,7 +184,7 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam,
     return r, p, t
 
 
-def velocity_verlet_Ndim(r0, p0, t_max, dt, f):
+def velocity_verlet_Ndim(r0, p0, t_max, dt, f, periodic: dict):
     t = np.arange(0, t_max, dt)
 
     r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
@@ -196,14 +196,18 @@ def velocity_verlet_Ndim(r0, p0, t_max, dt, f):
     r_i = r0
     p_i = p0
 
-    for i in range(len(t) - 1):
-        a1 = f(r_i)
+    for i in tqdm(range(len(t) - 1)):
+        a1 = f(r_i, periodic=periodic['force'])
 
         p_i += a1 * dt / 2.
 
         r_i += p_i * dt
 
-        a2 = f(r_i)
+        if periodic['PBC']:
+            r_i[np.where(r_i > periodic['box_size'] / 2.)] = r_i[np.where(r_i > periodic['box_size'] / 2.)] - periodic['box_size']
+            r_i[np.where(r_i < -periodic['box_size'] / 2.)] = r_i[np.where(r_i < -periodic['box_size'] / 2.)] + periodic['box_size']
+
+        a2 = f(r_i, periodic=periodic['force'])
 
         p_i += a2 * dt / 2.
 
