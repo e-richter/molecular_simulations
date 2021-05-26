@@ -57,6 +57,15 @@ def chain_force(r, k=1, periodic=False):
     return bond_force / np.linalg.norm(bond_force)
 
 
-def LJ_force(r, sigma=1):
+def LJ_force(r, sigma=1, periodic=False):
+
+    bond_force = np.zeros(r.shape)
+
+    for i, r_i in enumerate(r):
+        d = r[np.arange(len(r)) != i] - r[i]
+        f = 24 * (2*(sigma/np.linalg.norm(d, axis=1))**12 - (sigma/np.linalg.norm(d, axis=1))**6) / np.linalg.norm(d, axis=1)**2
+        bond_force[i] = (np.stack([f, f, f], axis=1) * d).sum(axis=0)
+
+    return bond_force #/ np.linalg.norm(bond_force)
 
 
