@@ -1,5 +1,6 @@
 import numpy as np
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 
 def velocity_verlet(r1_0, r2_0, p1_0, p2_0, t_max, dt, f):
@@ -128,14 +129,12 @@ def rungekutta4(y0, t, f, v):
     return y
 
 
-def BABAB_Ndim(r0, p0, t_max, dt, f, lam,
-               thermal_noise: bool, periodic: dict):
-    """
-    usage of periodic:
-    periodic = {'PBC': bool,
-                'box_size': int,
-                'force': bool}
-    """
+def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, periodic=None):
+    if periodic is None:
+        periodic = {'PBC': False,
+                    'box_size': 0,
+                    'closed': False}
+
     t = np.arange(0, t_max, dt)
 
     r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
@@ -157,24 +156,24 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam,
         if i % tn == 0:
             p_i = np.random.normal(loc=0.0, scale=1.0, size=r0.shape)
         else:
-            a1 = f(r_i, periodic=periodic['force'])
+            a1 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']})
             p_i += a1 * dt * lam
 
         r_i += p_i * dt / 2.
         if periodic['PBC']:
-            r_i[np.where(r_i > periodic['box_size'] / 2.)] = r_i[np.where(r_i > periodic['box_size'] / 2.)] - periodic['box_size']
-            r_i[np.where(r_i < -periodic['box_size'] / 2.)] = r_i[np.where(r_i < -periodic['box_size'] / 2.)] + periodic['box_size']
+            r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
+            r_i[np.where(r_i < -periodic['box_size'] / 2.)] += periodic['box_size']
 
-        a2 = f(r_i, periodic=periodic['force'])
+        a2 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']})
 
         p_i += a2 * dt * (1 - 2 * lam)
 
         r_i += p_i * dt / 2.
         if periodic['PBC']:
-            r_i[np.where(r_i > periodic['box_size'] / 2.)] = r_i[np.where(r_i > periodic['box_size'] / 2.)] - periodic['box_size']
-            r_i[np.where(r_i < -periodic['box_size'] / 2.)] = r_i[np.where(r_i < -periodic['box_size'] / 2.)] + periodic['box_size']
+            r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
+            r_i[np.where(r_i < -periodic['box_size'] / 2.)] += periodic['box_size']
 
-        a3 = f(r_i, periodic=periodic['force'])
+        a3 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']})
 
         p_i += a3 * dt * lam
 
@@ -184,7 +183,12 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam,
     return r, p, t
 
 
-def velocity_verlet_Ndim(r0, p0, t_max, dt, f, periodic: dict):
+def velocity_verlet_Ndim(r0, p0, t_max, dt, f, periodic=None):
+    if periodic is None:
+        periodic = {'PBC': False,
+                    'box_size': 0,
+                    'closed': False}
+
     t = np.arange(0, t_max, dt)
 
     r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
@@ -197,21 +201,43 @@ def velocity_verlet_Ndim(r0, p0, t_max, dt, f, periodic: dict):
     p_i = p0
 
     for i in tqdm(range(len(t) - 1)):
-        a1 = f(r_i, periodic=periodic['force'])
+        a1 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
 
-        p_i += a1 * dt / 2.
-
-        r_i += p_i * dt
+        r_i += p_i * dt + a1 * dt * dt / 2.
 
         if periodic['PBC']:
-            r_i[np.where(r_i > periodic['box_size'] / 2.)] = r_i[np.where(r_i > periodic['box_size'] / 2.)] - periodic['box_size']
-            r_i[np.where(r_i < -periodic['box_size'] / 2.)] = r_i[np.where(r_i < -periodic['box_size'] / 2.)] + periodic['box_size']
+            r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
+            r_i[np.where(r_i < -periodic['box_size'] / 2.)] += periodic['box_size']
 
-        a2 = f(r_i, periodic=periodic['force'])
+        a2 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
 
-        p_i += a2 * dt / 2.
+        p_i += (a1 + a2) * dt / 2.
 
         r[i + 1] = r_i
         p[i + 1] = p_i
 
     return r, p, t
+
+
+def marsaglia_method(N):
+
+    z1 = np.zeros(N)
+    z2 = np.zeros(N)
+
+    for i in range(N):
+
+        while True:
+            u = (np.random.rand() * 2) - 1
+            v = (np.random.rand() * 2) - 1
+            q = u**2 + v**2
+
+            if q < 1:
+                p = np.sqrt(-2 * np.log(q) / q)
+
+                z1[i] = u*p
+                z2[i] = v*p
+
+                break
+
+    return z1, z2
+
