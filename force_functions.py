@@ -38,11 +38,16 @@ def FENE_force(r1, r2, eps=1, a=1):
     return F1, F2
 
 
-def chain_force(r, k=1, periodic=False):
+def chain_force(r, k=1, periodic=None, closed=False):
+
+    if periodic is None:
+        periodic = {'PBC': False,
+                    'box_size': 0}
+
     N = len(r)
     bond_force = np.zeros(r.shape)
 
-    if periodic:
+    if closed:
         bond_force[0] = -k * ((r[0] - r[-1]) - (r[1] - r[0]))
         bond_force[-1] = -k * ((r[-1] - r[-2]) - (r[0] - r[-1]))
     else:
@@ -50,22 +55,71 @@ def chain_force(r, k=1, periodic=False):
         bond_force[-1] = -k * (r[-1] - r[-2])
 
     for i in range(1, N - 1):
-        f = -(r[i] - r[i - 1]) + (r[i + 1] - r[i])
-        f *= k
+
+        d1 = r[i] - r[i - 1]
+        d2 = r[i + 1] - r[i]
+
+        if periodic['PBC']:
+            d1[np.where(d1 > periodic['box_size'] / 2.)] = d1[np.where(d1 > periodic['box_size'] / 2.)] - periodic['box_size']
+            d2[np.where(d2 > periodic['box_size'] / 2.)] = d2[np.where(d2 > periodic['box_size'] / 2.)] - periodic['box_size']
+
+            d1[np.where(d1 < -periodic['box_size'] / 2.)] = d1[np.where(d1 < -periodic['box_size'] / 2.)] + periodic['box_size']
+            d2[np.where(d2 < -periodic['box_size'] / 2.)] = d2[np.where(d2 < -periodic['box_size'] / 2.)] + periodic['box_size']
+
+        f = -k * (d1 - d2)
         bond_force[i] = f
 
-    return bond_force / np.linalg.norm(bond_force)
+    return bond_force
 
 
-def LJ_force(r, sigma=1, periodic=False):
+# def LJ_force(r, sigma=1, periodic=None, closed=None):
+#     if periodic is None:
+#         periodic = {'PBC': False,
+#                     'box_size': 0}
+#
+#     bond_force = np.zeros(r.shape)
+#
+#     for i in range(len(r)):
+#         # d = r[np.arange(len(r)) != i] - r[i]
+#         d = np.delete(r, i, axis=0) - r[i]
+#
+#         if periodic['PBC']:
+#             d[np.where(d > periodic['box_size'] / 2.)] -= periodic['box_size']
+#             d[np.where(d < -periodic['box_size'] / 2.)] += periodic['box_size']
+#
+#         d_mag = np.linalg.norm(d, axis=1)
+#
+#         f = (48 * np.power(sigma, 12) / np.power(d_mag, 13) - 24 * np.power(sigma, 6) / np.power(d_mag, 7)) / d_mag
+#
+#         bond_force[i] = (np.expand_dims(f, axis=0).T * d).sum(axis=0)
+#
+#     return bond_force
+
+def LJ_force(r, sigma=1, periodic=None, closed=None):
+    if periodic is None:
+        periodic = {'PBC': False,
+                    'box_size': 0}
 
     bond_force = np.zeros(r.shape)
 
-    for i, r_i in enumerate(r):
-        d = r[np.arange(len(r)) != i] - r[i]
-        f = 24 * (2*(sigma/np.linalg.norm(d, axis=1))**12 - (sigma/np.linalg.norm(d, axis=1))**6) / np.linalg.norm(d, axis=1)**2
-        bond_force[i] = (np.stack([f, f, f], axis=1) * d).sum(axis=0)
+    for i in range(len(r)):
+        for j in range(len(r)):
+            if i <= j:
+                continue
+            else:
+                d = r[i] - r[j]
 
-    return bond_force #/ np.linalg.norm(bond_force)
+                if periodic['PBC']:
+                    d[np.where(d > periodic['box_size'] / 2.)] -= periodic['box_size']
+                    d[np.where(d < -periodic['box_size'] / 2.)] += periodic['box_size']
+
+                d_mag = np.linalg.norm(d)
+
+                f = (48 * np.power(sigma, 12) / np.power(d_mag, 13) - 24 * np.power(sigma, 6) / np.power(d_mag, 7))
+
+                bond_force[i] += f*d / d_mag
+                bond_force[j] -= f*d / d_mag
+
+    return bond_force
 
 
