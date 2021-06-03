@@ -3,49 +3,47 @@ from tqdm import tqdm
 
 
 def velocity_verlet(r1_0, r2_0, p1_0, p2_0, t_max, dt, f):
+    t = np.arange(0, t_max, dt)
 
-        t = np.arange(0, t_max, dt)
+    r1 = np.zeros((len(t), r1_0.shape[0]))
+    r2 = np.zeros((len(t), r2_0.shape[0]))
+    p1 = np.zeros((len(t), p1_0.shape[0]))
+    p2 = np.zeros((len(t), p2_0.shape[0]))
 
-        r1 = np.zeros((len(t), r1_0.shape[0]))
-        r2 = np.zeros((len(t), r2_0.shape[0]))
-        p1 = np.zeros((len(t), p1_0.shape[0]))
-        p2 = np.zeros((len(t), p2_0.shape[0]))
+    r1[0] = r1_0
+    r2[0] = r2_0
+    p1[0] = p1_0
+    p2[0] = p2_0
 
-        r1[0] = r1_0
-        r2[0] = r2_0
-        p1[0] = p1_0
-        p2[0] = p2_0
+    r1_i = r1_0
+    r2_i = r2_0
+    p1_i = p1_0
+    p2_i = p2_0
 
-        r1_i = r1_0
-        r2_i = r2_0
-        p1_i = p1_0
-        p2_i = p2_0
+    for i in range(len(t) - 1):
+        a11, a12 = f(r1_i, r2_i)
 
-        for i in range(len(t) - 1):
-            a11, a12 = f(r1_i, r2_i)
+        p1_i += a11 * dt / 2.
+        p2_i += a12 * dt / 2.
 
-            p1_i += a11 * dt / 2.
-            p2_i += a12 * dt / 2.
+        r1_i += p1_i * dt
+        r2_i += p2_i * dt
 
-            r1_i += p1_i * dt
-            r2_i += p2_i * dt
+        a21, a22 = f(r1_i, r2_i)
 
-            a21, a22 = f(r1_i, r2_i)
+        p1_i += a21 * dt / 2.
+        p2_i += a22 * dt / 2.
 
-            p1_i += a21 * dt / 2.
-            p2_i += a22 * dt / 2.
+        r1[i + 1] = r1_i
+        r2[i + 1] = r2_i
 
-            r1[i + 1] = r1_i
-            r2[i + 1] = r2_i
+        p1[i + 1] = p1_i
+        p2[i + 1] = p2_i
 
-            p1[i + 1] = p1_i
-            p2[i + 1] = p2_i
-
-        return r1, r2, p1, p2, t
+    return r1, r2, p1, p2, t
 
 
 def BABAB(r1_0, r2_0, p1_0, p2_0, t_max, dt, f, l):
-
     t = np.arange(0, t_max, dt)
 
     r1 = np.zeros((len(t), r1_0.shape[0]))
@@ -130,8 +128,7 @@ def rungekutta4(y0, t, f, v):
     return y
 
 
-def BABAB_Ndim(r0, p0, t_max, dt, f, lam):
-
+def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise=True):
     t = np.arange(0, t_max, dt)
 
     r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
@@ -143,10 +140,18 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam):
     r_i = r0
     p_i = p0
 
-    for i in tqdm(range(len(t) - 1)):
-        a1 = f(r_i)
+    if thermal_noise:
+        tn = int(1 / dt)
+    else:
+        tn = np.nan
 
-        p_i += a1 * dt * lam
+    for i in tqdm(range(len(t) - 1)):
+
+        if i % tn == 0:
+            p_i = np.random.normal(loc=0.0, scale=1.0, size=r0.shape)
+        else:
+            a1 = f(r_i)
+            p_i += a1 * dt * lam
 
         r_i += p_i * dt / 2.
 
@@ -165,33 +170,64 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam):
 
     return r, p, t
 
-
 def velocity_verlet_Ndim(r0, p0, t_max, dt, f):
+    t = np.arange(0, t_max, dt)
 
-        t = np.arange(0, t_max, dt)
+    r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
+    p = np.zeros([len(t), p0.shape[0], p0.shape[1]])
 
-        r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
-        p = np.zeros([len(t), p0.shape[0], p0.shape[1]])
+    r[0] = r0
+    p[0] = p0
 
-        r[0] = r0
-        p[0] = p0
+    r_i = r0
+    p_i = p0
 
-        r_i = r0
-        p_i = p0
+    for i in range(len(t) - 1):
+        a1 = f(r_i)
 
-        for i in range(len(t) - 1):
-            a1 = f(r_i)
+        p_i += a1 * dt / 2.
 
-            p_i += a1 * dt / 2.
+        r_i += p_i * dt
 
-            r_i += p_i * dt
+        a2 = f(r_i)
 
-            a2 = f(r_i)
+        p_i += a2 * dt / 2.
 
-            p_i += a2 * dt / 2.
+        r[i + 1] = r_i
+        p[i + 1] = p_i
 
-            r[i + 1] = r_i
-            p[i + 1] = p_i
+    return r, p, t
 
-        return r, p, t
+def velocity_verlet_Ndim_PBC(r0, p0, t_max, dt, f, L):
+    t = np.arange(0, t_max, dt)
 
+    r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
+    p = np.zeros([len(t), p0.shape[0], p0.shape[1]])
+
+    r[0] = r0
+    p[0] = p0
+
+    r_i = r0
+    p_i = p0
+    
+    for i in tqdm(range(len(t) - 1)):
+        a1 = f(r_i, L)
+
+        p_i += a1 * dt / 2.
+
+        r_i += p_i * dt
+        
+        for particles in range(r0.shape[0]):
+            for dim in range(r0.shape[1]):
+                if r_i[particles,dim] > .5 * L:
+                    r_i[particles,dim] -= L
+                elif r_i[particles,dim] < -0.5 * L:
+                    r_i[particles,dim] += L
+        
+        a2 = f(r_i, L)
+        p_i += a2 * dt / 2.
+
+        r[i + 1] = r_i
+        p[i + 1] = p_i
+
+    return r, p, t

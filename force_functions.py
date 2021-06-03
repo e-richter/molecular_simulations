@@ -50,3 +50,54 @@ def chain_force(r, k=1):
         bond_force[i] = f
 
     return bond_force / np.linalg.norm(bond_force)
+
+def chain_force_PBC(r, L, k=1):
+    N = len(r)
+    bond_force = np.zeros(r.shape)
+    
+    r01 = r[1] - r[0]
+    for dim in range(r.shape[1]):
+        if r01[dim] > .5 * L:
+                    r01[dim] -= L
+        elif r01[dim] < -0.5 * L:
+                    r01[dim] += L
+    
+    rN = r[N - 1] - r[N - 2]
+    for dim in range(r.shape[1]):
+        if rN[dim] > .5 * L:
+                    r01[dim] -= L
+        elif rN[dim] < -0.5 * L:
+                    r01[dim] += L
+    bond_force[0] = k * r01
+    bond_force[N - 1] = -k * rN
+
+    for i in range(1, N - 1):
+        r1 = r[i] - r[i - 1]
+        r2 = r[i+1] - r[i]
+        for dim in range(r.shape[1]):
+            if r1[dim] > .5 * L:
+                r1[dim] -= L
+            elif r1[dim] < -0.5 * L:
+                r1[dim] += L
+            if r2[dim] > .5 * L:
+                r2[dim] -= L
+            elif r2[dim] < -0.5 * L:
+                r2[dim] += L
+            f = -r1 + r2
+            f *= k
+            bond_force[i] = f
+                
+    return bond_force / np.linalg.norm(bond_force)
+
+def chain_force_closed(r, k=1):
+    N = len(r)
+    bond_force = np.zeros(r.shape)
+    bond_force[0] = k * (r[1] - r[0]) - k * (r[0] - r[N - 1])
+    bond_force[N - 1] = -k * (r[N - 1] - r[N - 2]) + k * (r[0] - r[N - 1])
+
+    for i in range(1, N - 1):
+        f = -(r[i] - r[i - 1]) + (r[i + 1] - r[i])
+        f *= k
+        bond_force[i] = f
+
+    return bond_force / np.linalg.norm(bond_force)
