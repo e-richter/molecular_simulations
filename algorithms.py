@@ -156,24 +156,26 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, periodic=None):
         if i % tn == 0:
             p_i = np.random.normal(loc=0.0, scale=1.0, size=r0.shape)
         else:
-            a1 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']})
+            a1 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size'], closed=periodic['closed']})
             p_i += a1 * dt * lam
 
         r_i += p_i * dt / 2.
+        
         if periodic['PBC']:
             r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
             r_i[np.where(r_i < -periodic['box_size'] / 2.)] += periodic['box_size']
 
-        a2 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']})
+        a2 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size'], closed=periodic['closed']})
 
         p_i += a2 * dt * (1 - 2 * lam)
 
         r_i += p_i * dt / 2.
+        
         if periodic['PBC']:
             r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
             r_i[np.where(r_i < -periodic['box_size'] / 2.)] += periodic['box_size']
 
-        a3 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']})
+        a3 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size'], closed=periodic['closed']})
 
         p_i += a3 * dt * lam
 
@@ -203,7 +205,7 @@ def velocity_verlet_Ndim(r0, p0, t_max, dt, f, periodic=None):
     for i in tqdm(range(len(t) - 1)):
         a1 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
 
-        r_i += p_i * dt + a1 * dt * dt / 2.
+        r_i += p_i * dt + a1 * dt**2 / 2.
 
         if periodic['PBC']:
             r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
@@ -241,3 +243,37 @@ def marsaglia_method(N):
 
     return z1, z2
 
+
+def velocity_verlet_Ndim_PBC(r0, p0, t_max, dt, f, L):
+    t = np.arange(0, t_max, dt)
+
+    r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
+    p = np.zeros([len(t), p0.shape[0], p0.shape[1]])
+
+    r[0] = r0
+    p[0] = p0
+
+    r_i = r0
+    p_i = p0
+    
+    for i in tqdm(range(len(t) - 1)):
+        a1 = f(r_i, L)
+
+        p_i += a1 * dt / 2.
+
+        r_i += p_i * dt
+        
+        for particles in range(r0.shape[0]):
+            for dim in range(r0.shape[1]):
+                if r_i[particles,dim] > .5 * L:
+                    r_i[particles,dim] -= L
+                elif r_i[particles,dim] < -0.5 * L:
+                    r_i[particles,dim] += L
+        
+        a2 = f(r_i, L)
+        p_i += a2 * dt / 2.
+
+        r[i + 1] = r_i
+        p[i + 1] = p_i
+
+    return r, p, t
