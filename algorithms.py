@@ -156,7 +156,7 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, periodic=None):
         if i % tn == 0:
             p_i = np.random.normal(loc=0.0, scale=1.0, size=r0.shape)
         else:
-            a1 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size'], closed=periodic['closed']})
+            a1 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
             p_i += a1 * dt * lam
 
         r_i += p_i * dt / 2.
@@ -165,7 +165,7 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, periodic=None):
             r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
             r_i[np.where(r_i < -periodic['box_size'] / 2.)] += periodic['box_size']
 
-        a2 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size'], closed=periodic['closed']})
+        a2 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
 
         p_i += a2 * dt * (1 - 2 * lam)
 
@@ -175,7 +175,7 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, periodic=None):
             r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
             r_i[np.where(r_i < -periodic['box_size'] / 2.)] += periodic['box_size']
 
-        a3 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size'], closed=periodic['closed']})
+        a3 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
 
         p_i += a3 * dt * lam
 
@@ -265,10 +265,10 @@ def velocity_verlet_Ndim_PBC(r0, p0, t_max, dt, f, L):
         
         for particles in range(r0.shape[0]):
             for dim in range(r0.shape[1]):
-                if r_i[particles,dim] > .5 * L:
-                    r_i[particles,dim] -= L
-                elif r_i[particles,dim] < -0.5 * L:
-                    r_i[particles,dim] += L
+                if r_i[particles, dim] > .5 * L:
+                    r_i[particles, dim] -= L
+                elif r_i[particles, dim] < -0.5 * L:
+                    r_i[particles, dim] += L
         
         a2 = f(r_i, L)
         p_i += a2 * dt / 2.
