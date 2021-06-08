@@ -25,8 +25,8 @@ def rtb_velocity(p1, p2):
 
 
 def dumbbell_force(r1, r2, k=1):
-    F1 = -k * (r1-r2)
-    F2 = -k * (r2-r1)
+    F1 = -k * (r1 - r2)
+    F2 = -k * (r2 - r1)
 
     return F1, F2
 
@@ -39,7 +39,6 @@ def FENE_force(r1, r2, eps=1, a=1):
 
 
 def chain_force(r, k=1, periodic=None, closed=False):
-
     if periodic is None:
         periodic = {'PBC': False,
                     'box_size': 0}
@@ -60,15 +59,14 @@ def chain_force(r, k=1, periodic=None, closed=False):
         d2 = r[i + 1] - r[i]
 
         if periodic['PBC']:
-            d1[np.where(d1 > periodic['box_size'] / 2.)] = d1[np.where(d1 > periodic['box_size'] / 2.)] - periodic['box_size']
-            d2[np.where(d2 > periodic['box_size'] / 2.)] = d2[np.where(d2 > periodic['box_size'] / 2.)] - periodic['box_size']
+            d1[np.where(d1 > periodic['box_size'] / 2.)] -= periodic['box_size']
+            d2[np.where(d2 > periodic['box_size'] / 2.)] -= periodic['box_size']
 
-            d1[np.where(d1 < -periodic['box_size'] / 2.)] = d1[np.where(d1 < -periodic['box_size'] / 2.)] + periodic['box_size']
-            d2[np.where(d2 < -periodic['box_size'] / 2.)] = d2[np.where(d2 < -periodic['box_size'] / 2.)] + periodic['box_size']
+            d1[np.where(d1 < -periodic['box_size'] / 2.)] += periodic['box_size']
+            d2[np.where(d2 < -periodic['box_size'] / 2.)] += periodic['box_size']
 
         f = -k * (d1 - d2)
         bond_force[i] = f
-
 
     return bond_force
 
@@ -119,35 +117,35 @@ def LJ_force(r, sigma=1, periodic=None, closed=None):
 
                 f = (48 * np.power(sigma, 12) / np.power(d_mag, 13) - 24 * np.power(sigma, 6) / np.power(d_mag, 7))
 
-                bond_force[i] += f*d / d_mag
-                bond_force[j] -= f*d / d_mag
+                bond_force[i] += f * d / d_mag
+                bond_force[j] -= f * d / d_mag
 
     return bond_force
-  
+
 
 def chain_force_PBC(r, L, k=1):
     N = len(r)
     bond_force = np.zeros(r.shape)
-    
+
     r01 = r[1] - r[0]
     for dim in range(r.shape[1]):
         if r01[dim] > .5 * L:
-                    r01[dim] -= L
+            r01[dim] -= L
         elif r01[dim] < -0.5 * L:
-                    r01[dim] += L
-    
+            r01[dim] += L
+
     rN = r[N - 1] - r[N - 2]
     for dim in range(r.shape[1]):
         if rN[dim] > .5 * L:
-                    r01[dim] -= L
+            r01[dim] -= L
         elif rN[dim] < -0.5 * L:
-                    r01[dim] += L
+            r01[dim] += L
     bond_force[0] = k * r01
     bond_force[N - 1] = -k * rN
 
     for i in range(1, N - 1):
         r1 = r[i] - r[i - 1]
-        r2 = r[i+1] - r[i]
+        r2 = r[i + 1] - r[i]
         for dim in range(r.shape[1]):
             if r1[dim] > .5 * L:
                 r1[dim] -= L
@@ -160,7 +158,7 @@ def chain_force_PBC(r, L, k=1):
             f = -r1 + r2
             f *= k
             bond_force[i] = f
-                
+
     return bond_force / np.linalg.norm(bond_force)
 
 
