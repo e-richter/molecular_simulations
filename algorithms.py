@@ -1,5 +1,6 @@
 import numpy as np
 from tqdm import tqdm
+from scipy.special import factorial
 import matplotlib.pyplot as plt
 
 
@@ -277,3 +278,57 @@ def velocity_verlet_Ndim_PBC(r0, p0, t_max, dt, f, L):
         p[i + 1] = p_i
 
     return r, p, t
+
+
+def metropolis_hastings(moves, zeta, N0=0, M=1, random=False):
+    N = [N0]
+    N_old = N0
+
+    for i in tqdm(range(moves)):
+
+        if random:
+            m = np.random.choice(np.arange(1, M + 1))
+        else:
+            m = M
+
+        u = np.random.uniform()
+        if u < .5:
+            N_new = N_old - m
+            if N_new < 0:
+                N_new = 0
+            acc_prob = np.minimum(1, factorial(N_old) / (factorial(N_new) * zeta ** m))
+            if np.isnan(acc_prob):
+                acc_prob = 0.
+
+            N_old = np.random.choice([N_new, N_old], p=[acc_prob, 1 - acc_prob])
+        else:
+            N_new = N_old + m
+            acc_prob = np.minimum(1, (factorial(N_old) * zeta ** m) / factorial(N_new))
+            if np.isnan(acc_prob):
+                acc_prob = 0.
+
+            N_old = np.random.choice([N_new, N_old], p=[acc_prob, 1 - acc_prob])
+
+        N.append(N_old)
+
+    return np.asarray(N)
+
+
+def poisson(length, zeta):
+    z = np.zeros(length)
+    count = np.zeros(length)
+    for i in tqdm(range(length)):
+
+        L = np.exp(-zeta)
+        p = 1
+        k = 0
+        u_count = 0
+        while p > L:
+            u = np.random.uniform()
+            p *= u
+            k += 1
+            u_count += 1
+        z[i] = k - 1
+        count[i] = u_count
+
+    return z, count
