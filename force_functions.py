@@ -145,8 +145,6 @@ def LJ_force(r, sigma=1, periodic=None, closed=None):
     return force
 
 
-
-
 def chain_force_PBC(r, L, k=1):
     N = len(r)
     bond_force = np.zeros(r.shape)
@@ -198,3 +196,17 @@ def chain_force_closed(r, k=1):
         bond_force[i] = f
 
     return bond_force / np.linalg.norm(bond_force)
+
+
+def calc_LJ_energy(r, p, sigma=1):
+    idx = np.arange(len(r))
+    pairs = np.meshgrid(idx, idx)
+    distances = np.linalg.norm(r[pairs[0]] - r[pairs[1]], axis=-1)
+
+    V = (4 * np.power(sigma / distances, 12) - 4 * np.power(sigma / distances, 6))
+    V[np.isnan(V)] = 0.
+    V = V.sum()
+
+    T = (np.linalg.norm(p, axis=1) ** 2 / 2.).sum()
+
+    return V + T
