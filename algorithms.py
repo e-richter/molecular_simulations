@@ -1,6 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 from scipy.special import factorial
+from scipy.stats import maxwell
 import matplotlib.pyplot as plt
 
 
@@ -148,14 +149,15 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, periodic=None):
     p_i = p0
 
     if thermal_noise:
-        tn = int(1 / dt)
+        tn = int(1 / dt / 10)
     else:
         tn = np.nan
 
     for i in tqdm(range(len(t) - 1)):
 
         if i % tn == 0:
-            p_i = np.random.normal(loc=0.0, scale=1.0, size=r0.shape)
+            # p_i = np.random.normal(loc=0.0, scale=1.0, size=r0.shape)
+            p_i = maxwell.rvs(loc=0, scale=1.5, size=r0.shape) / np.sqrt(1.5)
         else:
             a1 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
             p_i += a1 * dt * lam
