@@ -79,8 +79,8 @@ def chain_force(r, k=1, periodic=None, closed=False):
 #     bond_force = np.zeros(r.shape)
 #
 #     for i in range(len(r)):
-#         # d = r[np.arange(len(r)) != i] - r[i]
-#         d = np.delete(r, i, axis=0) - r[i]
+#         d = r[np.arange(len(r)) != i] - r[i]
+#         # d = np.delete(r, i, axis=0) - r[i]
 #
 #         if periodic['PBC']:
 #             d[np.where(d > periodic['box_size'] / 2.)] -= periodic['box_size']
@@ -198,10 +198,20 @@ def chain_force_closed(r, k=1):
     return bond_force / np.linalg.norm(bond_force)
 
 
-def calc_LJ_energy(r, p, sigma=1):
+def calc_LJ_energy(r, p, sigma=1, periodic=None):
+    if periodic is None:
+        periodic = {'PBC': False,
+                    'box_size': 0}
+
     idx = np.arange(len(r))
     pairs = np.meshgrid(idx, idx)
-    distances = np.linalg.norm(r[pairs[0]] - r[pairs[1]], axis=-1)
+    separations = r[pairs[0]] - r[pairs[1]]
+
+    if periodic['PBC']:
+        separations[np.where(separations > periodic['box_size'] / 2.)] -= periodic['box_size']
+        separations[np.where(separations < -periodic['box_size'] / 2.)] += periodic['box_size']
+
+    distances = np.triu(np.linalg.norm(separations, axis=-1))
 
     V = (4 * np.power(sigma / distances, 12) - 4 * np.power(sigma / distances, 6))
     V[np.isnan(V)] = 0.
@@ -210,3 +220,25 @@ def calc_LJ_energy(r, p, sigma=1):
     T = (np.linalg.norm(p, axis=1) ** 2 / 2.).sum()
 
     return V + T
+
+
+def calc_LJ_pot(r, sigma=1, periodic=None):
+    if periodic is None:
+        periodic = {'PBC': False,
+                    'box_size': 0}
+
+    idx = np.arange(len(r))
+    pairs = np.meshgrid(idx, idx)
+    separations = r[pairs[0]] - r[pairs[1]]
+
+    if periodic['PBC']:
+        separations[np.where(separations > periodic['box_size'] / 2.)] -= periodic['box_size']
+        separations[np.where(separations < -periodic['box_size'] / 2.)] += periodic['box_size']
+
+    distances = np.triu(np.linalg.norm(separations, axis=-1))
+
+    V = (4 * np.power(sigma / distances, 12) - 4 * np.power(sigma / distances, 6))
+    V[np.isnan(V)] = 0.
+    V = V.sum()
+
+    return V
