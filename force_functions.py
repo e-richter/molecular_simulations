@@ -79,8 +79,8 @@ def chain_force(r, k=1, periodic=None, closed=False):
 #     bond_force = np.zeros(r.shape)
 #
 #     for i in range(len(r)):
-#         # d = r[np.arange(len(r)) != i] - r[i]
-#         d = np.delete(r, i, axis=0) - r[i]
+#         d = r[np.arange(len(r)) != i] - r[i]
+#         # d = np.delete(r, i, axis=0) - r[i]
 #
 #         if periodic['PBC']:
 #             d[np.where(d > periodic['box_size'] / 2.)] -= periodic['box_size']
@@ -95,32 +95,54 @@ def chain_force(r, k=1, periodic=None, closed=False):
 #     return bond_force
 
 
+# def LJ_force(r, sigma=1, periodic=None, closed=None):
+#     if periodic is None:
+#         periodic = {'PBC': False,
+#                     'box_size': 0}
+#
+#     bond_force = np.zeros(r.shape)
+#
+#     for i in range(len(r)):
+#         for j in range(len(r)):
+#             if i <= j:
+#                 continue
+#             else:
+#                 d = r[i] - r[j]
+#
+#                 if periodic['PBC']:
+#                     d[np.where(d > periodic['box_size'] / 2.)] -= periodic['box_size']
+#                     d[np.where(d < -periodic['box_size'] / 2.)] += periodic['box_size']
+#
+#                 d_mag = np.linalg.norm(d)
+#
+#                 f = (48 * np.power(sigma, 12) / np.power(d_mag, 13) - 24 * np.power(sigma, 6) / np.power(d_mag, 7))
+#
+#                 bond_force[i] += f * d / d_mag
+#                 bond_force[j] -= f * d / d_mag
+#
+#     return bond_force
+
 def LJ_force(r, sigma=1, periodic=None, closed=None):
     if periodic is None:
         periodic = {'PBC': False,
                     'box_size': 0}
 
-    bond_force = np.zeros(r.shape)
+    idx = np.arange(len(r))
+    pairs = np.meshgrid(idx, idx)
 
-    for i in range(len(r)):
-        for j in range(len(r)):
-            if i <= j:
-                continue
-            else:
-                d = r[i] - r[j]
+    separations = r[pairs[0]] - r[pairs[1]]
+    if periodic['PBC']:
+        separations[np.where(separations > periodic['box_size'] / 2.)] -= periodic['box_size']
+        separations[np.where(separations < -periodic['box_size'] / 2.)] += periodic['box_size']
 
-                if periodic['PBC']:
-                    d[np.where(d > periodic['box_size'] / 2.)] -= periodic['box_size']
-                    d[np.where(d < -periodic['box_size'] / 2.)] += periodic['box_size']
+    distances = np.linalg.norm(separations, axis=-1)
 
-                d_mag = np.linalg.norm(d)
+    f = (48 * np.power(sigma, 12) / np.power(distances, 13) - 24 * np.power(sigma, 6) / np.power(distances, 7)) / distances
+    f[np.isnan(f)] = 0.
 
-                f = (48 * np.power(sigma, 12) / np.power(d_mag, 13) - 24 * np.power(sigma, 6) / np.power(d_mag, 7))
+    force = (np.expand_dims(f[:, :], axis=0).T * separations[:, :, :]).sum(axis=0)
 
-                bond_force[i] += f * d / d_mag
-                bond_force[j] -= f * d / d_mag
-
-    return bond_force
+    return force
 
 
 def chain_force_PBC(r, L, k=1):
@@ -174,3 +196,52 @@ def chain_force_closed(r, k=1):
         bond_force[i] = f
 
     return bond_force / np.linalg.norm(bond_force)
+
+
+def calc_LJ_energy(r, p, sigma=1, periodic=None):
+    if periodic is None:
+        periodic = {'PBC': False,
+                    'box_size': 0}
+
+    idx = np.arange(len(r))
+    pairs = np.meshgrid(idx, idx)
+    separations = r[pairs[0]] - r[pairs[1]]
+
+    if periodic['PBC']:
+        separations[np.where(separations > periodic['box_size'] / 2.)] -= periodic['box_size']
+        separations[np.where(separations < -periodic['box_size'] / 2.)] += periodic['box_size']
+
+    distances = np.triu(np.linalg.norm(separations, axis=-1))
+
+    V = (4 * np.power(sigma / distances, 12) - 4 * np.power(sigma / distances, 6))
+    V[np.isnan(V)] = 0.
+    V = V.sum()
+
+    T = (np.linalg.norm(p, axis=1) ** 2 / 2.).sum()
+
+    return V + T
+
+
+def calc_LJ_pot(r, sigma=1, periodic=None):
+    if periodic is None:
+        periodic = {'PBC': False,
+                    'box_size': 0}
+
+    idx = np.arange(len(r))
+    pairs = np.meshgrid(idx, idx)
+    separations = r[pairs[0]] - r[pairs[1]]
+
+    if periodic['PBC']:
+        separations[np.where(separations > periodic['box_size'] / 2.)] -= periodic['box_size']
+        separations[np.where(separations < -periodic['box_size'] / 2.)] += periodic['box_size']
+
+    distances = np.triu(np.linalg.norm(separations, axis=-1))
+
+    V = (4 * np.power(sigma / distances, 12) - 4 * np.power(sigma / distances, 6))
+    V[np.isnan(V)] = 0.
+    V = V.sum()
+
+    return V
+
+def harmonic_force(r, omega):
+    return -omega * r
