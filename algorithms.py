@@ -346,10 +346,10 @@ def leimkuhler_matthews_BAOAB(r0, p0, t_max, dt, f, gamma, omega):
     r_i = r0
     p_i = p0
     
+    a0 = f(r_i, omega)
+    p_i += a0 * dt / 2.
+    
     for i in tqdm(range(len(t) - 1)):
-        a1 = f(r_i, omega)
-
-        p_i += a1 * dt / 2.
 
         r_i += p_i * dt / 2
         
@@ -358,8 +358,8 @@ def leimkuhler_matthews_BAOAB(r0, p0, t_max, dt, f, gamma, omega):
         
         r_i += p_i * dt / 2
         
-        a2 = f(r_i, omega)
-        p_i += a2 * dt / 2.
+        a = f(r_i, omega)
+        p_i += a * dt / 2.
 
         r[i + 1] = r_i
         p[i + 1] = p_i

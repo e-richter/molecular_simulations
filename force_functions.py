@@ -244,4 +244,4 @@ def calc_LJ_pot(r, sigma=1, periodic=None):
     return V
 
 def harmonic_force(r, omega):
-    return -omega * r
+    return -omega^2 * r
