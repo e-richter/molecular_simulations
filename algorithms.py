@@ -131,7 +131,7 @@ def rungekutta4(y0, t, f, v):
     return y
 
 
-def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, periodic=None):
+def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, maxwell_noise: bool, periodic=None, T=None):
     if periodic is None:
         periodic = {'PBC': False,
                     'box_size': 0,
@@ -150,14 +150,20 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, periodic=None):
 
     if thermal_noise:
         tn = int(1 / dt / 10)
+    elif maxwell_noise:
+        tn = int(1 / dt / 10)
+        if T is None:
+            T = 1.5
     else:
         tn = np.nan
 
     for i in tqdm(range(len(t) - 1)):
 
         if i % tn == 0:
-            # p_i = np.random.normal(loc=0.0, scale=1.0, size=r0.shape)
-            p_i = maxwell.rvs(loc=0, scale=1.5, size=r0.shape) / np.sqrt(1.5)
+            if thermal_noise:
+                p_i = np.random.normal(loc=0.0, scale=1.0, size=r0.shape)
+            elif maxwell_noise:
+                p_i = maxwell.rvs(loc=0, scale=T, size=r0.shape) / np.sqrt(T)
         else:
             a1 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
             p_i += a1 * dt * lam
