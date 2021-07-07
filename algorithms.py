@@ -1,5 +1,7 @@
 import numpy as np
 from tqdm import tqdm
+from scipy.special import factorial
+from scipy.stats import maxwell
 import matplotlib.pyplot as plt
 
 
@@ -147,14 +149,15 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, periodic=None):
     p_i = p0
 
     if thermal_noise:
-        tn = int(1 / dt)
+        tn = int(1 / dt / 10)
     else:
         tn = np.nan
 
     for i in tqdm(range(len(t) - 1)):
 
         if i % tn == 0:
-            p_i = np.random.normal(loc=0.0, scale=1.0, size=r0.shape)
+            # p_i = np.random.normal(loc=0.0, scale=1.0, size=r0.shape)
+            p_i = maxwell.rvs(loc=0, scale=1.5, size=r0.shape) / np.sqrt(1.5)
         else:
             a1 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
             p_i += a1 * dt * lam
@@ -277,3 +280,88 @@ def velocity_verlet_Ndim_PBC(r0, p0, t_max, dt, f, L):
         p[i + 1] = p_i
 
     return r, p, t
+
+
+def metropolis_hastings(moves, zeta, N0=0, M=1, random=False):
+    N = [N0]
+    N_old = N0
+
+    for i in tqdm(range(moves)):
+
+        if random:
+            m = np.random.choice(np.arange(1, M + 1))
+        else:
+            m = M
+
+        u = np.random.uniform()
+        if u < .5:
+            N_new = N_old - m
+            if N_new < 0:
+                N_new = 0
+            acc_prob = np.minimum(1, factorial(N_old) / (factorial(N_new) * zeta ** m))
+            if np.isnan(acc_prob):
+                acc_prob = 0.
+
+            N_old = np.random.choice([N_new, N_old], p=[acc_prob, 1 - acc_prob])
+        else:
+            N_new = N_old + m
+            acc_prob = np.minimum(1, (factorial(N_old) * zeta ** m) / factorial(N_new))
+            if np.isnan(acc_prob):
+                acc_prob = 0.
+
+            N_old = np.random.choice([N_new, N_old], p=[acc_prob, 1 - acc_prob])
+
+        N.append(N_old)
+
+    return np.asarray(N)
+
+
+def poisson(length, zeta):
+    z = np.zeros(length)
+    count = np.zeros(length)
+    for i in tqdm(range(length)):
+
+        L = np.exp(-zeta)
+        p = 1
+        k = 0
+        u_count = 0
+        while p > L:
+            u = np.random.uniform()
+            p *= u
+            k += 1
+            u_count += 1
+        z[i] = k - 1
+        count[i] = u_count
+
+    return z, count
+
+def leimkuhler_matthews_BAOAB(r0, p0, t_max, dt, f, gamma, omega):
+    t = np.arange(0, t_max, dt)
+    
+    k = int(gamma / dt)
+    
+    r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
+    p = np.zeros([len(t), p0.shape[0], p0.shape[1]])
+    
+    r_i = r0
+    p_i = p0
+    
+    for i in tqdm(range(len(t) - 1)):
+        a1 = f(r_i, omega)
+
+        p_i += a1 * dt / 2.
+
+        r_i += p_i * dt
+        
+        N=np.random.normal(0, 1, size=p0.shape)
+        p_i = np.exp(-gamma * dt * p_i) - np.sqrt(1-np.exp(-2*gamma*dt))*N
+        
+        r_i += p_i * dt
+        
+        a2 = f(r_i, omega)
+        p_i += a2 * dt / 2.
+
+        r[i + 1] = r_i
+        p[i + 1] = p_i
+
+    return r[::k], p[::k], t[::k]
