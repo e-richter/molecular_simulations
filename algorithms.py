@@ -351,12 +351,12 @@ def leimkuhler_matthews_BAOAB(r0, p0, t_max, dt, f, gamma, omega):
 
         p_i += a1 * dt / 2.
 
-        r_i += p_i * dt
+        r_i += p_i * dt / 2
         
         N=np.random.normal(0, 1, size=p0.shape)
         p_i = np.exp(-gamma * dt * p_i) - np.sqrt(1-np.exp(-2*gamma*dt))*N
         
-        r_i += p_i * dt
+        r_i += p_i * dt / 2
         
         a2 = f(r_i, omega)
         p_i += a2 * dt / 2.
