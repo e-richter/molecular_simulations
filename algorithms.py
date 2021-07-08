@@ -165,7 +165,7 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, maxwell_noise: bo
             elif maxwell_noise:
                 p_i = maxwell.rvs(loc=0, scale=T, size=r0.shape) / np.sqrt(T)
         else:
-            a1 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
+            a1 = f(r_i, periodic=periodic)
             p_i += a1 * dt * lam
 
         r_i += p_i * dt / 2.
@@ -174,7 +174,7 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, maxwell_noise: bo
             r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
             r_i[np.where(r_i < -periodic['box_size'] / 2.)] += periodic['box_size']
 
-        a2 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
+        a2 = f(r_i, periodic=periodic)
 
         p_i += a2 * dt * (1 - 2 * lam)
 
@@ -184,7 +184,7 @@ def BABAB_Ndim(r0, p0, t_max, dt, f, lam, thermal_noise: bool, maxwell_noise: bo
             r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
             r_i[np.where(r_i < -periodic['box_size'] / 2.)] += periodic['box_size']
 
-        a3 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
+        a3 = f(r_i, periodic=periodic)
 
         p_i += a3 * dt * lam
 
@@ -212,7 +212,7 @@ def velocity_verlet_Ndim(r0, p0, t_max, dt, f, periodic=None):
     p_i = p0
 
     for i in tqdm(range(len(t) - 1)):
-        a1 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
+        a1 = f(r_i, periodic=periodic)
 
         r_i += p_i * dt + a1 * dt**2 / 2.
 
@@ -220,7 +220,7 @@ def velocity_verlet_Ndim(r0, p0, t_max, dt, f, periodic=None):
             r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
             r_i[np.where(r_i < -periodic['box_size'] / 2.)] += periodic['box_size']
 
-        a2 = f(r_i, periodic={'PBC': periodic['PBC'], 'box_size': periodic['box_size']}, closed=periodic['closed'])
+        a2 = f(r_i, periodic=periodic)
 
         p_i += (a1 + a2) * dt / 2.
 
@@ -340,3 +340,40 @@ def poisson(length, zeta):
         count[i] = u_count
 
     return z, count
+
+
+def leimkuhler_matthews_BAOAB(r0, p0, t_max, dt, f, gamma, periodic=None):
+    if periodic is None:
+        periodic = {'PBC': False,
+                    'box_size': 0,
+                    'closed': False}
+
+    t = np.arange(0, t_max, dt)
+
+    k = 10
+
+    r = np.zeros([len(t), r0.shape[0], r0.shape[1]])
+    p = np.zeros([len(t), p0.shape[0], p0.shape[1]])
+
+    r_i = r0
+    p_i = p0
+
+    for i in tqdm(range(len(t) - 1)):
+        a1 = f(r_i, periodic=periodic)
+
+        p_i += a1 * dt / 2.
+
+        r_i += p_i * dt / 2
+
+        N = np.random.normal(0, np.sqrt(2), size=p0.shape)
+        p_i = np.exp(-gamma * dt) * p_i - np.sqrt(1 - np.exp(-2 * gamma * dt)) * N
+
+        r_i += p_i * dt / 2
+
+        a2 = f(r_i, periodic=periodic)
+        p_i += a2 * dt / 2.
+
+        r[i + 1] = r_i
+        p[i + 1] = p_i
+
+    return r[::k], p[::k], t[::k]
