@@ -38,15 +38,16 @@ def FENE_force(r1, r2, eps=1, a=1):
     return F1, F2
 
 
-def chain_force(r, k=1, periodic=None, closed=False):
+def chain_force(r, k=1, periodic=None):
     if periodic is None:
         periodic = {'PBC': False,
-                    'box_size': 0}
+                    'box_size': 0,
+                    'closed': False}
 
     N = len(r)
     bond_force = np.zeros(r.shape)
 
-    if closed:
+    if periodic['closed']:
         bond_force[0] = -k * ((r[0] - r[-1]) - (r[1] - r[0]))
         bond_force[-1] = -k * ((r[-1] - r[-2]) - (r[0] - r[-1]))
     else:
@@ -122,10 +123,11 @@ def chain_force(r, k=1, periodic=None, closed=False):
 #
 #     return bond_force
 
-def LJ_force(r, sigma=1, periodic=None, closed=None):
+def LJ_force(r, sigma=1, periodic=None):
     if periodic is None:
         periodic = {'PBC': False,
-                    'box_size': 0}
+                    'box_size': 0,
+                    'closed': False}
 
     idx = np.arange(len(r))
     pairs = np.meshgrid(idx, idx)
@@ -201,7 +203,8 @@ def chain_force_closed(r, k=1):
 def calc_LJ_energy(r, p, sigma=1, periodic=None):
     if periodic is None:
         periodic = {'PBC': False,
-                    'box_size': 0}
+                    'box_size': 0,
+                    'closed': False}
 
     idx = np.arange(len(r))
     pairs = np.meshgrid(idx, idx)
@@ -225,7 +228,8 @@ def calc_LJ_energy(r, p, sigma=1, periodic=None):
 def calc_LJ_pot(r, sigma=1, periodic=None):
     if periodic is None:
         periodic = {'PBC': False,
-                    'box_size': 0}
+                    'box_size': 0,
+                    'closed': False}
 
     idx = np.arange(len(r))
     pairs = np.meshgrid(idx, idx)
@@ -242,3 +246,7 @@ def calc_LJ_pot(r, sigma=1, periodic=None):
     V = V.sum()
 
     return V
+
+
+def harmonic_force(r, omega=1/3.):
+    return -omega**2 * r
