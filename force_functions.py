@@ -31,11 +31,42 @@ def dumbbell_force(r1, r2, k=1):
     return F1, F2
 
 
-def FENE_force(r1, r2, eps=1, a=1):
-    F1 = -eps / a ** 2 * (1 / (1 - (np.linalg.norm(r1 - r2) ** 2 / a ** 2))) * (r1 - r2)
-    F2 = -eps / a ** 2 * (1 / (1 - (np.linalg.norm(r2 - r1) ** 2 / a ** 2))) * (r2 - r1)
+def FENE_force(r, K=1, rmax=1, periodic=None):
+    if periodic is None:
+        periodic = {'PBC': False,
+                    'box_size': 0,
+                    'closed': False}
 
-    return F1, F2
+    N = len(r)
+    bond_force = np.zeros(r.shape)
+
+    if periodic['closed']:
+        bond_force[0] = K * (1 / (1 - (np.linalg.norm(r[1] - r[0]) ** 2 / rmax ** 2))) * (r[1] - r[0])
+        bond_force[0] -= K * (1 / (1 - (np.linalg.norm(r[0] - r[-1]) ** 2 / rmax ** 2))) * (r[0] - r[-1])
+
+        bond_force[-1] = K * (1 / (1 - (np.linalg.norm(r[0] - r[-1]) ** 2 / rmax ** 2))) * (r[0] - r[-1])
+        bond_force[-1] -= K * (1 / (1 - (np.linalg.norm(r[-1] - r[-2]) ** 2 / rmax ** 2))) * (r[-1] - r[-2])
+    else:
+        bond_force[0] = K * (1 / (1 - (np.linalg.norm(r[1] - r[0]) ** 2 / rmax ** 2))) * (r[1] - r[0])
+        bond_force[-1] = -K * (1 / (1 - (np.linalg.norm(r[-1] - r[-2]) ** 2 / rmax ** 2))) * (r[-1] - r[-2])
+
+    for i in range(1, N-1):
+
+        d1 = r[i + 1] - r[i]
+        d2 = r[i] - r[i - 1]
+
+        if periodic['PBC']:
+            d1[np.where(d1 > periodic['box_size'] / 2.)] -= periodic['box_size']
+            d2[np.where(d2 > periodic['box_size'] / 2.)] -= periodic['box_size']
+
+            d1[np.where(d1 < -periodic['box_size'] / 2.)] += periodic['box_size']
+            d2[np.where(d2 < -periodic['box_size'] / 2.)] += periodic['box_size']
+
+        f1 = K * (1 / (1 - (np.linalg.norm(d1) ** 2 / rmax ** 2))) * d1
+        f2 = K * (1 / (1 - (np.linalg.norm(d2) ** 2 / rmax ** 2))) * d2
+        bond_force[i] = f1 - f2
+
+    return bond_force
 
 
 def chain_force(r, k=1, periodic=None):
@@ -123,7 +154,7 @@ def chain_force(r, k=1, periodic=None):
 #
 #     return bond_force
 
-def LJ_force(r, sigma=1, periodic=None):
+def LJ_force(r, sigma=2.5**(1/3.), periodic=None):
     if periodic is None:
         periodic = {'PBC': False,
                     'box_size': 0,
