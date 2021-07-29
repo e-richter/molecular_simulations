@@ -365,10 +365,18 @@ def leimkuhler_matthews_BAOAB(r0, p0, t_max, dt, f, gamma, periodic=None):
 
         r_i += p_i * dt / 2
 
+        if periodic['PBC']:
+            r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
+            r_i[np.where(r_i < -periodic['box_size'] / 2.)] += periodic['box_size']
+
         N = np.random.normal(0, np.sqrt(2), size=p0.shape)
         p_i = np.exp(-gamma * dt) * p_i - np.sqrt(1 - np.exp(-2 * gamma * dt)) * N
 
         r_i += p_i * dt / 2
+
+        if periodic['PBC']:
+            r_i[np.where(r_i > periodic['box_size'] / 2.)] -= periodic['box_size']
+            r_i[np.where(r_i < -periodic['box_size'] / 2.)] += periodic['box_size']
 
         a2 = f(r_i, periodic=periodic)
         p_i += a2 * dt / 2.
@@ -376,4 +384,4 @@ def leimkuhler_matthews_BAOAB(r0, p0, t_max, dt, f, gamma, periodic=None):
         r[i + 1] = r_i
         p[i + 1] = p_i
 
-    return r[::k], p[::k], t[::k]
+    return r, p, t
