@@ -41,11 +41,29 @@ def FENE_force(r, K=1, rmax=1, periodic=None):
     bond_force = np.zeros(r.shape)
 
     if periodic['closed']:
-        bond_force[0] = K * (1 / (1 - (np.linalg.norm(r[1] - r[0]) ** 2 / rmax ** 2))) * (r[1] - r[0])
-        bond_force[0] -= K * (1 / (1 - (np.linalg.norm(r[0] - r[-1]) ** 2 / rmax ** 2))) * (r[0] - r[-1])
+        d1 = r[1] - r[0]
+        d2 = r[0] - r[-1]
 
-        bond_force[-1] = K * (1 / (1 - (np.linalg.norm(r[0] - r[-1]) ** 2 / rmax ** 2))) * (r[0] - r[-1])
-        bond_force[-1] -= K * (1 / (1 - (np.linalg.norm(r[-1] - r[-2]) ** 2 / rmax ** 2))) * (r[-1] - r[-2])
+        d1[np.where(d1 > periodic['box_size'] / 2.)] -= periodic['box_size']
+        d2[np.where(d2 > periodic['box_size'] / 2.)] -= periodic['box_size']
+
+        d1[np.where(d1 < -periodic['box_size'] / 2.)] += periodic['box_size']
+        d2[np.where(d2 < -periodic['box_size'] / 2.)] += periodic['box_size']
+
+        bond_force[0] = K * (1 / (1 - (np.linalg.norm(d1) ** 2 / rmax ** 2))) * d1
+        bond_force[0] -= K * (1 / (1 - (np.linalg.norm(d2) ** 2 / rmax ** 2))) * d2
+
+        d1 = r[0] - r[-1]
+        d2 = r[-1] - r[-2]
+
+        d1[np.where(d1 > periodic['box_size'] / 2.)] -= periodic['box_size']
+        d2[np.where(d2 > periodic['box_size'] / 2.)] -= periodic['box_size']
+
+        d1[np.where(d1 < -periodic['box_size'] / 2.)] += periodic['box_size']
+        d2[np.where(d2 < -periodic['box_size'] / 2.)] += periodic['box_size']
+
+        bond_force[-1] = K * (1 / (1 - (np.linalg.norm(d1) ** 2 / rmax ** 2))) * d1
+        bond_force[-1] -= K * (1 / (1 - (np.linalg.norm(d2) ** 2 / rmax ** 2))) * d2
     else:
         bond_force[0] = K * (1 / (1 - (np.linalg.norm(r[1] - r[0]) ** 2 / rmax ** 2))) * (r[1] - r[0])
         bond_force[-1] = -K * (1 / (1 - (np.linalg.norm(r[-1] - r[-2]) ** 2 / rmax ** 2))) * (r[-1] - r[-2])
@@ -154,16 +172,16 @@ def chain_force(r, k=1, periodic=None):
 #
 #     return bond_force
 
-def LJ_force(r, sigma=2.5**(1/3.), periodic=None):
+def LJ_force(position, sigma=1, periodic=None):
     if periodic is None:
         periodic = {'PBC': False,
                     'box_size': 0,
                     'closed': False}
 
-    idx = np.arange(len(r))
+    idx = np.arange(len(position))
     pairs = np.meshgrid(idx, idx)
 
-    separations = r[pairs[0]] - r[pairs[1]]
+    separations = position[pairs[0]] - position[pairs[1]]
     if periodic['PBC']:
         separations[np.where(separations > periodic['box_size'] / 2.)] -= periodic['box_size']
         separations[np.where(separations < -periodic['box_size'] / 2.)] += periodic['box_size']
