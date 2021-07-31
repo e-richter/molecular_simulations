@@ -358,6 +358,9 @@ def leimkuhler_matthews_BAOAB(r0, p0, t_max, dt, f, gamma, periodic=None):
     r_i = r0
     p_i = p0
 
+    r[0] = r0
+    p[0] = p0
+
     for i in tqdm(range(len(t) - 1)):
         a1 = f(r_i, periodic=periodic)
 
